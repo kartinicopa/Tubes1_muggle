@@ -15,7 +15,7 @@ timeout /t 3
 cd ../reference-bot-publish/
 timeout /t 3
 :: Salah satu ReferenceBot nanti diganti ke java -jar path (path-nya disesuaikan dengan direktori bot yang telah di-build) untuk diuji coba
-start "" dotnet ReferenceBot.dll
+start java -jar ../starter-bots/JavaBot/target/JavaBot.jar
 timeout /t 3
 start "" dotnet ReferenceBot.dll
 timeout /t 3
