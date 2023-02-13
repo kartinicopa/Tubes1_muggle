@@ -124,6 +124,73 @@ public class BotService {
                 .collect(Collectors.toList());
     }
 
+    private void avoidBorder() {
+        var worldRadiusNow = gameState.getWorld().getRadius();
+        var xPos = getBot().getPosition().getX();
+        var yPos = getBot().getPosition().getY();
+        var distance = Math.sqrt(xPos * xPos + yPos * yPos);
+        if (distance >= worldRadiusNow) {
+            playerAction.setAction(PlayerActions.Forward);
+            playerAction.setHeading((getBot().currentHeading + 180) % 360);
+        }
+    }
+
+    private void attackStrats() {
+        var currentTick = gameState.getWorld().getCurrentTick();
+
+        if (currentTick > 10 && (currentTick % 10 == 0)) {
+            if (bot.getSize() > 10) {
+                playerAction.setAction(PlayerActions.FireTorpedoes);
+                playerAction.setHeading(getBot().currentHeading);
+            }
+        }
+        else if (getSupernova() != null) {
+            playerAction.setAction(PlayerActions.Forward);
+            playerAction.setHeading(getHeadingBetween(getSupernova()));
+        }
+        else if (isGetSupernova()) {
+            playerAction.setAction(PlayerActions.FireSupernova);
+            playerAction.setHeading(0);
+        }
+        else if (isSupernovaBomb() != null) {
+            var distance = getDistanceBetween(bot, isSupernovaBomb());
+            if (distance > 100) {
+                playerAction.setAction(PlayerActions.DetonateSupernova);
+                playerAction.setHeading(0);
+            }
+        }
+        else {
+            playerAction.setAction(PlayerActions.Forward);
+            playerAction.setHeading(getBot().currentHeading);
+        }
+    }
+
+    private GameObject getSupernova() {
+        for (GameObject gameObject : gameState.getGameObjects()) {
+            if (gameObject.getGameObjectType() == ObjectTypes.SupernovaPickup) {
+                return gameObject;
+            }
+        }
+        return null;
+    }
+
+    private boolean isGetSupernova() {
+        for (GameObject gameObject : gameState.getPlayerGameObjects()) {
+            if (gameObject.getGameObjectType() == ObjectTypes.SupernovaPickup) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private GameObject isSupernovaBomb() {
+        for (GameObject gameObject : gameState.getGameObjects()) {
+            if (gameObject.getGameObjectType() == ObjectTypes.SupernovaBomb) {
+                return gameObject;
+            }
+        }
+        return null;
+    }
         
     public void computeNextPlayerAction(PlayerAction playerAction) { 
         // determine the closest target food, enemy, avoid danger\
