@@ -32,6 +32,74 @@ public class BotService {
 
     }
 
+    private void avoidBorder() {
+        var worldRadiusNow = gameState.getWorld().getRadius();
+        var xPos = getBot().getPosition().getX();
+        var yPos = getBot().getPosition().getY();
+        var distance = Math.sqrt(xPos * xPos + yPos * yPos);
+        if (distance >= worldRadiusNow) {
+            playerAction.setAction(PlayerActions.Forward);
+            playerAction.setHeading((getBot().currentHeading + 180) % 360);
+        }
+    }
+
+    private void attackStrats() {
+        var currentTick = gameState.getWorld().getCurrentTick();
+
+        if (currentTick > 10 && (currentTick % 10 == 0)) {
+            if (bot.getSize() > 10) {
+                playerAction.setAction(PlayerActions.FireTorpedoes);
+                playerAction.setHeading(getBot().currentHeading);
+            }
+        }
+        else if (getSupernova() != null) {
+            playerAction.setAction(PlayerActions.Forward);
+            playerAction.setHeading(getHeadingBetween(getSupernova()));
+        }
+        else if (isGetSupernova()) {
+            playerAction.setAction(PlayerActions.FireSupernova);
+            playerAction.setHeading(0);
+        }
+        else if (isSupernovaBomb() != null) {
+            var distance = getDistanceBetween(bot, isSupernovaBomb());
+            if (distance > 100) {
+                playerAction.setAction(PlayerActions.DetonateSupernova);
+                playerAction.setHeading(0);
+            }
+        }
+        else {
+            playerAction.setAction(PlayerActions.Forward);
+            playerAction.setHeading(getBot().currentHeading);
+        }
+    }
+
+    private GameObject getSupernova() {
+        for (GameObject gameObject : gameState.getGameObjects()) {
+            if (gameObject.getGameObjectType() == ObjectTypes.SupernovaPickup) {
+                return gameObject;
+            }
+        }
+        return null;
+    }
+
+    private boolean isGetSupernova() {
+        for (GameObject gameObject : gameState.getPlayerGameObjects()) {
+            if (gameObject.getGameObjectType() == ObjectTypes.SupernovaPickup) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private GameObject isSupernovaBomb() {
+        for (GameObject gameObject : gameState.getGameObjects()) {
+            if (gameObject.getGameObjectType() == ObjectTypes.SupernovaBomb) {
+                return gameObject;
+            }
+        }
+        return null;
+    }
+
     // method getClosestFood
     private GameObject getClosestFood() {
         List<GameObject> foods = getFoods();
@@ -55,37 +123,30 @@ public class BotService {
                         || gameObject.getGameObjectType() == ObjectTypes.Superfood)
                 .collect(Collectors.toList());
     }
-    // strategi makan
-    private void eat() {
-        // 1. Determine the closest food
-        GameObject closestFood = getClosestFood();
-        if (closestFood != null) {
-            // 2. Determine the angle to the food
-            double angleToFood = getHeadingBetween(closestFood); // getHeadingBetween(getBot());
-            // 3. Determine the angle to the food relative to the bot's current heading
-            double angleToFoodRelative = angleToFood - getHeadingBetween(bot);
-            // 4. If the food is in front of the bot, move forward
-            if (Math.abs(angleToFoodRelative) < 90) {
-                // playerAction -> Forward
-                playerAction.setAction(PlayerActions.Forward);
-            }
-            // 5. If the food is behind the bot, move backward
-            else {
-                playerAction.setAction(PlayerActions.Stop);
-            }
-            // 6. If the food is to the left of the bot, turn left
-            if (angleToFoodRelative > 0) {
-                playerAction.setAction(PlayerActions.Stop);
-            }
-            // 7. If the food is to the right of the bot, turn right
-            else {
-                playerAction.setAction(PlayerActions.Stop);
-            }
-        }
-    }
 
         
-    private void computeNextPlayerAction(PlayerAction playerAction) { 
+    public void computeNextPlayerAction(PlayerAction playerAction) { 
+        // determine the closest target food, enemy, avoid danger\
+        if (bot.getSize() < 100) {
+            playerAction.setAction(PlayerActions.Forward);
+            playerAction.setHeading(0);
+        } else {
+            var closestFood = getClosestFood();
+            if (closestFood != null) {
+                var distance = getDistanceBetween(bot, closestFood);
+                if (distance < 100) {
+                    playerAction.setAction(PlayerActions.Forward);
+                    playerAction.setHeading(getHeadingBetween(closestFood));
+                } else {
+                    playerAction.setAction(PlayerActions.Forward);
+                    playerAction.setHeading(0);
+                }
+            } else {
+                avoidDanger();
+            }
+        }
+        
+
         this.playerAction = playerAction;
 
     }
@@ -112,6 +173,25 @@ public class BotService {
             playerAction.setHeading(0);
         }
     }
+
+    private void detectTorpedoSalvo() {
+        var torpedoSalvo = gameState.getGameObjects().stream()
+                .filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.TorpedoSalvo)
+                .collect(Collectors.toList());
+        if (torpedoSalvo.size() > 0) {
+            // if there is a torpedoSalvo, move away from it
+            var closestTorpedoSalvo = torpedoSalvo.get(0);
+            var distance = getDistanceBetween(bot, closestTorpedoSalvo);
+            if (distance < 100) {
+                playerAction.setAction(PlayerActions.Forward);
+                playerAction.setHeading(getHeadingBetween(closestTorpedoSalvo));
+            } else {
+                playerAction.setAction(PlayerActions.Forward);
+                playerAction.setHeading(0);
+            }
+        }
+    }
+
 
     public void protectBot() {
         // check if my bot is in danger if size decrease 
