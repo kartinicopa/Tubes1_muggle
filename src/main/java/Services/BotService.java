@@ -38,28 +38,6 @@ public class BotService {
         this.playerAction = playerAction;
     }
 
-    public void computeNextPlayerAction(PlayerAction playerAction) {
-        // choose proper strategy
-        // get the closest object to execute
-        // execute the action
-        // get distance between bot and closest object, do action for the closest object
-        if (!gameState.getGameObjects().isEmpty()) {
-            if (gameState.getGameObjects().stream().anyMatch(x -> x.getGameObjectType() == ObjectTypes.FOOD)) {
-                eatStrategy();
-            }
-        } else {
-            attackStrategy();
-        }
-
-        this.playerAction = playerAction;
-        // attackStrategy();
-        // avoidDangerStrategy();
-        // eatStrategy();
-        // if (getBot().getHealth() < 50) {
-        //     avoidDangerStrategy();
-
-    }
-
     // method moveTowards for keep bot in ring
     public Position moveTowards(Position position, Position target, int distance) {
         double angle = Math.atan2(target.getY() - position.getY(), target.getX() - position.getX());
@@ -193,7 +171,7 @@ public class BotService {
     // method getTorpedoSalvos return TORPEDOSALVO
     public List<GameObject> getTorpedoSalvos() {
         return this.gameState.getGameObjects().stream()
-                .filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.TORPEDOSALVO)
+                .filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.TORPEDO_SALVO)
                 .collect(Collectors.toList());
     }
 
@@ -202,6 +180,7 @@ public class BotService {
         GameObject closestOtherPlayer = getClosestOtherPlayer();
         if (closestOtherPlayer != null) {
             // if the other player is bigger than me, run away
+            // INI MASIH BERESIKO SELF_DESTRUCT, PERLU PIKIR LAGI
             if (closestOtherPlayer.getSize() > getBot().getSize()) {
                 playerAction.setAction(PlayerActions.FIRE_TORPEDOES);
                 playerAction.setHeading(getHeadingBetween(closestOtherPlayer) + 180);
@@ -213,6 +192,46 @@ public class BotService {
                 playerAction.setHeading(getHeadingBetween(closestOtherPlayer));
             }
         }
+    }
+
+    public void computeNextPlayerAction(PlayerAction playerAction) {
+        // choose proper strategy
+        // get the closest object to execute
+        // execute the action
+        // get distance between bot and closest object, do action for the closest object
+
+        // if (!gameState.getGameObjects().isEmpty()) {
+        //     if (gameState.getGameObjects().stream().anyMatch(x -> x.getGameObjectType() == ObjectTypes.FOOD)) {
+        //         eatStrategy();
+        //     }
+        // } else {
+        //     attackStrategy();
+        // }
+
+        // this.playerAction = playerAction;
+
+        // attackStrategy();
+        // avoidDangerStrategy();
+        // eatStrategy();
+        // if (getBot().getHealth() < 50) {
+        //     avoidDangerStrategy();
+
+        double distance1 = getDistanceBetween(getBot(), getClosestFood());
+        double distance2 = getDistanceBetween(getBot(), getClosestDangerousObject());
+        double distance3 = getDistanceBetween(getBot(), getClosestOtherPlayer());
+        // GameObject[] closestList = {distance1, distance2, distance3};
+
+        if ((distance1 >= distance2 && distance1 > distance3)) {
+            eatStrategy();
+        }
+        else if (distance2 > distance1 && distance2 > distance3) {
+            avoidDangerStrategy();
+        }
+        else if (distance3 > distance1 && distance3 > distance2) {
+            attackStrategy();
+        }
+
+        this.playerAction = playerAction;
     }
     
     // public void avoidDanger() {
