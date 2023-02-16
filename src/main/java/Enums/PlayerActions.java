@@ -1,16 +1,16 @@
 package Enums;
 
 public enum PlayerActions {
-  Forward(1),
-  Stop(2),
-  StartAfterburner(3),
-  StopAfterburner(4),
-  FireTorpedoes(5),
-  FireSupernova(6),
-  DetonateSupernova(7),
-  FireTeleport(8),
-  Teleport(9),
-  ActivateShield(10);
+  FORWARD(1),
+  STOP(2),
+  START_AFTERBURNER(3),
+  STOP_AFTERBURNER(4),
+  FIRE_TORPEDOES(5),
+  FIRE_SUPERNOVA(6),
+  DETONATE_SUPERNOVA(7),
+  FIRE_TELEPORT(8),
+  TELEPORT(9),
+  ACTIVATE_SHIELD(10);
 
   public final Integer value;
 
