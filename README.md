@@ -19,11 +19,9 @@ Galaxio adalah sebuah game battle royale yang mempertandingkan bot kapal anda de
 
 
 ## Requirement dan Instalasi
-- Windows
-- Linux
-- MacOS
+- Windows/ Linux/ MacOS
 - NET Core 3.1
-
+- Apache Maven
 
 ## Build
 Command: mvn clean package
