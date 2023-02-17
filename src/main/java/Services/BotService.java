@@ -80,20 +80,13 @@ public class BotService {
         return minDistance;
     }
 
-    public void computeNextPlayerAction(PlayerAction playerAction) {
-        // int distanceToClosestFood = computeDistanceToClosestFood();
-        // int distanceToClosestEnemy = computeDistanceToClosestEnemy();
-        
+    public void computeNextPlayerAction(PlayerAction playerAction) {        
         if (!gameState.getGameObjects().isEmpty()) {    
             stayInsideTheRing();
         }     
         this.playerAction = playerAction; 
-    
     }
     
-    
-
-
     // method getFoods
     public List<GameObject> getFoods() {
         return this.gameState.getGameObjects().stream()
@@ -155,9 +148,13 @@ public class BotService {
                     .sorted(Comparator
                             .comparing(item -> getDistanceBetween(bot, item)))
                     .collect(Collectors.toList());
-        if (currentTick > 10 && (currentTick % 10 == 0)) {
-            if (bot.getSize() > 10) {
+        if (currentTick > 10 && (currentTick % 10 == 0) && bot.getSize() > 10) {
+            if (playerList.get(0).getSize() > bot.size) {
                 playerAction.setAction(PlayerActions.FIRETORPEDOES);
+                playerAction.setHeading(getHeadingBetween(playerList.get(0)));
+            }
+            else {
+                playerAction.setAction(PlayerActions.FORWARD);
                 playerAction.setHeading(getHeadingBetween(playerList.get(0)));
             }
         }
@@ -178,6 +175,8 @@ public class BotService {
         }
         else {
             eatStrategy();
+            protectBot();
+            avoidDanger();
         }
     }
 
@@ -230,6 +229,47 @@ public class BotService {
             }
         }
         return closestDangerousObject;
+    }
+    
+    public void avoidDanger() {
+        // move away from danger
+        var gasClouds = gameState.getGameObjects().stream().filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.GASCLOUD).collect(Collectors.toList());
+        var asteroidField = gameState.getGameObjects().stream().filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.ASTEROIDFIELD).collect(Collectors.toList());
+        var danger = new ArrayList<GameObject>();
+        danger.addAll(gasClouds);
+        danger.addAll(asteroidField);
+        var closestDanger = danger.stream().min(Comparator.comparing(gameObject -> getDistanceBetween(bot, gameObject))).orElse(null);
+        if (closestDanger != null) {
+            var distance = getDistanceBetween(bot, closestDanger);
+            if (distance < 100) {
+                playerAction.setAction(PlayerActions.FORWARD);
+                playerAction.setHeading(getHeadingBetween(closestDanger) + 180);
+            } 
+        }
+    }
+
+    public void protectBot() {
+        var otherBots = gameState.getPlayerGameObjects().stream().filter(gameObject -> gameObject.id != bot.id).collect(Collectors.toList());
+        // if getTorpedoSalvos is coming from otherBots
+        var torpedoSalvos = getTorpedoSalvos();
+        var torpedoSalvosComing = torpedoSalvos.stream().filter(gameObject -> gameObject.getId() != bot.id).collect(Collectors.toList());
+        if (torpedoSalvosComing.size() > 0) {
+            if (getShield() != null) {
+                playerAction.setAction(PlayerActions.ACTIVATESHIELD);
+            } else {
+                playerAction.setAction(PlayerActions.TELEPORT);
+                playerAction.setHeading(getHeadingBetween(otherBots.get(0)));
+            }
+        }
+    }
+
+    private GameObject getShield() {
+        for (GameObject gameObject : gameState.getPlayerGameObjects()) {
+            if (gameObject.getGameObjectType() == ObjectTypes.SHIELD) {
+                return gameObject;
+            }
+        }
+        return null;
     }
 
     // method avoidDangerStrategy
@@ -306,7 +346,6 @@ public class BotService {
     public int toDegrees(double v) {
         return (int) (v * (180 / Math.PI));
     }
-
 
     // method getDistance
     public double getDistanceBetween(GameObject object1, GameObject object2) {
