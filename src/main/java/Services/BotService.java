@@ -10,10 +10,9 @@ public class BotService {
     public GameObject bot;
     public PlayerAction playerAction;
     public GameState gameState;
-    private static final double TORPEDO_SPEED = 8.0; // kecepatan torpedo salvo
-    private static final double SHIELD_DISTANCE = 100.0; // jarak torpedo salvo dari bot ketika shield diaktifkan
-    private static final double SHIELD_DURATION = 3.0; // durasi shield dalam detik
-    // boolean setshield
+    public static final double SHIELD_DISTANCE = 100.0; 
+    // WORLD RADIUS
+    public static final double WORLD_RADIUS = 900.0;
 
 
 
@@ -38,30 +37,62 @@ public class BotService {
         this.playerAction = playerAction;
     }
 
-    // method moveTowards for keep bot in ring
-    public Position moveTowards(Position position, Position target, int distance) {
-        double angle = Math.atan2(target.getY() - position.getY(), target.getX() - position.getX());
-        return new Position((int) (position.getX() + distance * Math.cos(angle)), (int) (position.getY() + distance * Math.sin(angle)));
-    }
 
-    // getDistanceToCenter
-    public double getDistanceToCenter(Position position, Position center) {
-        return Math.sqrt(Math.pow(position.getX() - center.getX(), 2) + Math.pow(position.getY() - center.getY(), 2));
-    }
-
-    // method keep bot in ring
-    public void keepBotInRing() {
-        World world = gameState.getWorld();
-        Position center = world.getCenterPoint();
-        int radius = world.getRadius();
-        Position botPosition = bot.getPosition();
-        double distanceToCenter = getDistanceToCenter(botPosition, center);
-        if (distanceToCenter > radius) {
-            while (distanceToCenter > radius) {
-                botPosition = moveTowards(botPosition, center, -1);
+    // method computeDistanceToClosestFood
+    public int computeDistanceToClosestFood() {
+        int minDistance = Integer.MAX_VALUE;
+        for (GameObject gameObject : gameState.getGameObjects()) {
+            if (gameObject.getGameObjectType() == ObjectTypes.FOOD || gameObject.getGameObjectType() == ObjectTypes.SUPERFOOD) {
+                int distance = (int) getDistanceBetween(getBot(), gameObject);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                }
             }
         }
+        return minDistance;
     }
+
+    // method computeDistanceToClosestAvoidableEnemy
+    public int computeDistanceToClosestAvoidableEnemy() {
+        int minDistance = Integer.MAX_VALUE;
+        for (GameObject gameObject : gameState.getGameObjects()) {
+            if (gameObject.getGameObjectType() == ObjectTypes.GASCLOUD || gameObject.getGameObjectType() == ObjectTypes.ASTEROIDFIELD) {
+                int distance = (int) getDistanceBetween(getBot(), gameObject);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                }
+            }
+        }
+        return minDistance;
+    }
+
+    // method computeDistanceToClosestEnemy
+    public int computeDistanceToClosestEnemy() {
+        int minDistance = Integer.MAX_VALUE;
+        for (GameObject gameObject : gameState.getGameObjects()) {
+            if (gameObject.getGameObjectType() == ObjectTypes.PLAYER && gameObject.getId() != getBot().getId()) {
+                int distance = (int) getDistanceBetween(getBot(), gameObject);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                }
+            }
+        }
+        return minDistance;
+    }
+
+    public void computeNextPlayerAction(PlayerAction playerAction) {
+        // int distanceToClosestFood = computeDistanceToClosestFood();
+        // int distanceToClosestEnemy = computeDistanceToClosestEnemy();
+        
+        if (!gameState.getGameObjects().isEmpty()) {    
+            stayInsideTheRing();
+        }     
+        this.playerAction = playerAction; 
+    
+    }
+    
+    
+
 
     // method getFoods
     public List<GameObject> getFoods() {
@@ -86,26 +117,103 @@ public class BotService {
         return closestFood;
     }
 
-    // method eatStrategy
+    // method eatStrategy and update position agar tidak keluar dari world
     public void eatStrategy() {
         GameObject closestFood = getClosestFood();
         if (closestFood != null) {
+            // makan food yang terdekat pertama
             playerAction.setAction(PlayerActions.FORWARD);
             playerAction.setHeading(getHeadingBetween(closestFood));
-            // if the closest food is more than 1, choose one
-            if (getDistanceBetween(getBot(), closestFood) > 1) {
-                playerAction.setAction(PlayerActions.FORWARD);
-                playerAction.setHeading(getHeadingBetween(closestFood));
+        }
+    }
+
+    public void stayInsideTheRing() {
+        var currentWorld = gameState.getWorld();
+        var xPos = currentWorld.getCenterPoint().x;
+        var yPos = currentWorld.getCenterPoint().y;
+        var radius = currentWorld.getRadius();
+
+        var triangleX = Math.abs(xPos - bot.getPosition().x);
+        var triangleY = Math.abs(yPos - bot.getPosition().y);
+
+        var distanceFromCenter = Math.sqrt(triangleX * triangleX + triangleY * triangleY);
+        var direction = (toDegrees(Math.atan2(yPos - bot.getPosition().y, xPos - bot.getPosition().x)) + 360) % 360;
+
+        if (distanceFromCenter > radius) {
+            playerAction.setAction(PlayerActions.FORWARD);
+            playerAction.setHeading(direction);
+        }
+        else {
+            attackStrategy();
+        }
+    }
+
+    public void attackStrategy() {
+        var currentTick = gameState.getWorld().getCurrentTick();
+        var playerList = gameState.getPlayerGameObjects()
+                    .stream().filter(item -> item.getId() != bot.getId())
+                    .sorted(Comparator
+                            .comparing(item -> getDistanceBetween(bot, item)))
+                    .collect(Collectors.toList());
+        if (currentTick > 10 && (currentTick % 10 == 0)) {
+            if (bot.getSize() > 10) {
+                playerAction.setAction(PlayerActions.FIRETORPEDOES);
+                playerAction.setHeading(getHeadingBetween(playerList.get(0)));
             }
         }
+        else if (getSupernova() != null) {
+            playerAction.setAction(PlayerActions.FORWARD);
+            playerAction.setHeading(getHeadingBetween(getSupernova()));
+        }
+        else if (isGetSupernova()) {
+            playerAction.setAction(PlayerActions.FIRESUPERNOVA);
+            playerAction.setHeading(0);
+        }
+        else if (isSupernovaBomb() != null) {
+            var distance = getDistanceBetween(bot, isSupernovaBomb());
+            if (distance > 100) {
+                playerAction.setAction(PlayerActions.DETONATESUPERNOVA);
+                playerAction.setHeading(0);
+            }
+        }
+        else {
+            eatStrategy();
+        }
+    }
+
+    public GameObject getSupernova() {
+        for (GameObject gameObject : gameState.getGameObjects()) {
+            if (gameObject.getGameObjectType() == ObjectTypes.SUPERNOVAPICKUP) {
+                return gameObject;
+            }
+        }
+        return null;
+    }
+
+    public boolean isGetSupernova() {
+        for (GameObject gameObject : gameState.getPlayerGameObjects()) {
+            if (gameObject.getGameObjectType() == ObjectTypes.SUPERNOVAPICKUP) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public GameObject isSupernovaBomb() {
+        for (GameObject gameObject : gameState.getGameObjects()) {
+            if (gameObject.getGameObjectType() == ObjectTypes.SUPERNOVABOMB) {
+                return gameObject;
+            }
+        }
+        return null;
     }
 
     // method getDangerousObjects
     public List<GameObject> getDangerousObjects() {
-        // GAS_CLOUD and ASTEROID_FIELD
+        // GASCLOUD and ASTEROIDFIELD
         return this.gameState.getGameObjects().stream()
-                .filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.GAS_CLOUD
-                        || gameObject.getGameObjectType() == ObjectTypes.ASTEROID_FIELD)
+                .filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.GASCLOUD
+                        || gameObject.getGameObjectType() == ObjectTypes.ASTEROIDFIELD)
                 .collect(Collectors.toList());
     }
 
@@ -129,7 +237,7 @@ public class BotService {
         GameObject closestDangerousObject = getClosestDangerousObject();
         if (closestDangerousObject != null) {
             playerAction.setAction(PlayerActions.FORWARD);
-            playerAction.setHeading(getHeadingBetween(closestDangerousObject) + 180);
+            playerAction.setHeading(getHeadingBetween(closestDangerousObject)+180);
         }
     }
 
@@ -140,7 +248,7 @@ public class BotService {
                 .filter(gameObject -> gameObject.getId() != getBot().getId())
                 .collect(Collectors.toList());
     }
-
+    
     // method getClosestOtherPlayer
     public GameObject getClosestOtherPlayer() {
         List<GameObject> otherPlayers = getOtherPlayers();
@@ -154,7 +262,7 @@ public class BotService {
             }
         }
         return closestOtherPlayer;
-    }
+        }
     
     // method ACTIVATESHIELD IF THERE IS A TORPEDO SALVO COMING
     public void activateShieldIfDangerous() {
@@ -162,7 +270,7 @@ public class BotService {
         for (GameObject torpedoSalvo : torpedoSalvos) {
             double distance = getDistanceBetween(getBot(), torpedoSalvo);
             if (distance < SHIELD_DISTANCE) {
-                playerAction.setAction(PlayerActions.ACTIVATE_SHIELD);
+                playerAction.setAction(PlayerActions.ACTIVATESHIELD);
                 break;
             }
         }
@@ -171,139 +279,9 @@ public class BotService {
     // method getTorpedoSalvos return TORPEDOSALVO
     public List<GameObject> getTorpedoSalvos() {
         return this.gameState.getGameObjects().stream()
-                .filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.TORPEDO_SALVO)
+                .filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.TORPEDOSALVO)
                 .collect(Collectors.toList());
     }
-
-    // method attackStrategy
-    public void attackStrategy() {
-        GameObject closestOtherPlayer = getClosestOtherPlayer();
-        if (closestOtherPlayer != null) {
-            // if the other player is bigger than me, run away
-            // INI MASIH BERESIKO SELF_DESTRUCT, PERLU PIKIR LAGI
-            if (closestOtherPlayer.getSize() > getBot().getSize()) {
-                playerAction.setAction(PlayerActions.FIRE_TORPEDOES);
-                playerAction.setHeading(getHeadingBetween(closestOtherPlayer) + 180);
-
-            }
-            // if the other player is smaller than me, attack
-            else {
-                playerAction.setAction(PlayerActions.FORWARD);
-                playerAction.setHeading(getHeadingBetween(closestOtherPlayer));
-            }
-        }
-    }
-
-    public void computeNextPlayerAction(PlayerAction playerAction) {
-        // choose proper strategy
-        // get the closest object to execute
-        // execute the action
-        // get distance between bot and closest object, do action for the closest object
-
-        // if (!gameState.getGameObjects().isEmpty()) {
-        //     if (gameState.getGameObjects().stream().anyMatch(x -> x.getGameObjectType() == ObjectTypes.FOOD)) {
-        //         eatStrategy();
-        //     }
-        // } else {
-        //     attackStrategy();
-        // }
-
-        // this.playerAction = playerAction;
-
-        // attackStrategy();
-        // avoidDangerStrategy();
-        // eatStrategy();
-        // if (getBot().getHealth() < 50) {
-        //     avoidDangerStrategy();
-
-        double distance1 = getDistanceBetween(getBot(), getClosestFood());
-        double distance2 = getDistanceBetween(getBot(), getClosestDangerousObject());
-        double distance3 = getDistanceBetween(getBot(), getClosestOtherPlayer());
-        // GameObject[] closestList = {distance1, distance2, distance3};
-
-        if ((distance1 >= distance2 && distance1 > distance3)) {
-            eatStrategy();
-        }
-        else if (distance2 > distance1 && distance2 > distance3) {
-            avoidDangerStrategy();
-        }
-        else if (distance3 > distance1 && distance3 > distance2) {
-            attackStrategy();
-        }
-
-        this.playerAction = playerAction;
-    }
-    
-    // public void avoidDanger() {
-    //     // move away from danger
-    //     var gasClouds = gameState.getGameObjects().stream().filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.GAS_CLOUD).collect(Collectors.toList());
-    //     var asteroidField = gameState.getGameObjects().stream().filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.ASTEROID_FIELD).collect(Collectors.toList());
-    //     var danger = Stream.concat(gasClouds.stream(), asteroidField.stream()).collect(Collectors.toList());
-    //     if (!danger.isEmpty()) {
-    //         // move away from danger
-    //         var closestDanger = danger.get(0);
-    //         var distance = getDistanceBetween(bot, closestDanger);
-    //         if (distance < 100) {
-    //             playerAction.setAction(PlayerActions.FORWARD);
-    //             playerAction.setHeading(getHeadingBetween(closestDanger) + 180);
-    //         }
-    //     }
-    // }
-
-
-    // public void detectTorpedoSalvo() {
-    //     var torpedoSalvo = gameState.getGameObjects().stream()
-    //             .filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.TORPEDOSALVO)
-    //             .collect(Collectors.toList());
-    //     if (torpedoSalvo.size() > 0) {
-    //         // if there is a torpedoSalvo, move away from it
-    //         var closestTorpedoSalvo = torpedoSalvo.get(0);
-    //         var distance = getDistanceBetween(bot, closestTorpedoSalvo);
-    //         if (distance < 100) {
-    //             // determine activate shield or move away from it
-    //             if (getShield() != null) {
-    //                 playerAction.setAction(PlayerActions.ACTIVATE_SHIELD);
-    //                 playerAction.setHeading(getHeadingBetween(closestTorpedoSalvo) + 180);
-    //             } else {
-    //                 playerAction.setAction(PlayerActions.FORWARD);
-    //                 playerAction.setHeading(getHeadingBetween(closestTorpedoSalvo) + 180);
-    //             }
-    //         } else {
-    //             playerAction.setAction(PlayerActions.FORWARD);
-    //             playerAction.setHeading(0);
-    //         }
-    //     }
-    // }
-
-
-    // public void protectBot() {
-    //     // check if my bot is in danger if size decrease 
-    //     // if my bot is in danger, ActiveShield, Teleport, StartAfterBurner, StopAfterburner, FORWARD
-    //     if (bot.getSize() < 100) {
-    //         var otherBots = gameState.getPlayerGameObjects().stream().filter(gameObject -> gameObject.id != bot.id).collect(Collectors.toList());
-    //         var otherBotsSize = otherBots.stream().mapToInt(gameObject -> gameObject.getSize()).sum();
-    //         if (otherBotsSize > bot.getSize()) {
-    //             if (getShield() != null) {
-    //                 playerAction.setAction(PlayerActions.ACTIVATE_SHIELD);
-    //             } else {
-    //                 playerAction.setAction(PlayerActions.TELEPORT);
-    //                 playerAction.setHeading(getHeadingBetween(otherBots.get(0)));
-    //             }
-    //         } else {
-    //             playerAction.setAction(PlayerActions.FORWARD);
-    //             playerAction.setHeading(0);
-    //         }
-    //     }
-    // }
-
-    // public GameObject getShield() {
-    //     for (GameObject gameObject : gameState.getPlayerGameObjects()) {
-    //         if (gameObject.getGameObjectType() == ObjectTypes.SHIELD) {
-    //             return gameObject;
-    //         }
-    //     }
-    //     return null;
-    // }
 
     public GameState getGameState() {
         return this.gameState;
