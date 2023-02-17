@@ -2,9 +2,9 @@
 > Pemanfaatan Algoritma Greedy dalam Aplikasi Permainan “GALAXIO”
 
 ## KELOMPOK MUGGLE
-13518134 Raihan Iqbal
-13521020 Varraz Hazandra Abrar
-13521026 Kartini Copa
+- Raihan Iqbal 13518134
+- Varraz Hazandra Abrar 13521020
+- Kartini Copa 13521026
 
 ## Table of Contents
 * [Deskripsi Umum](#deskripsi-umum)
