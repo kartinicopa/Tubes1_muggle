@@ -88,13 +88,13 @@ public class BotService {
         }
         else if (isGetSupernova()) {
             playerAction.setAction(PlayerActions.FIRESUPERNOVA);
-            playerAction.setHeading(0);
+            playerAction.setHeading(getHeadingBetween(playerList.get(0)));
         }
         else if (isSupernovaBomb() != null) {
             var distance = getDistanceBetween(bot, isSupernovaBomb());
             if (distance > 100) {
                 playerAction.setAction(PlayerActions.DETONATESUPERNOVA);
-                playerAction.setHeading(0);
+                playerAction.setHeading(getHeadingBetween(playerList.get(0)));
             }
         }
         else {
