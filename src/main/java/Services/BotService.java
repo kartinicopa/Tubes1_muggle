@@ -37,87 +37,11 @@ public class BotService {
         this.playerAction = playerAction;
     }
 
-
-    // method computeDistanceToClosestFood
-    public int computeDistanceToClosestFood() {
-        int minDistance = Integer.MAX_VALUE;
-        for (GameObject gameObject : gameState.getGameObjects()) {
-            if (gameObject.getGameObjectType() == ObjectTypes.FOOD || gameObject.getGameObjectType() == ObjectTypes.SUPERFOOD) {
-                int distance = (int) getDistanceBetween(getBot(), gameObject);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                }
-            }
-        }
-        return minDistance;
-    }
-
-    // method computeDistanceToClosestAvoidableEnemy
-    public int computeDistanceToClosestAvoidableEnemy() {
-        int minDistance = Integer.MAX_VALUE;
-        for (GameObject gameObject : gameState.getGameObjects()) {
-            if (gameObject.getGameObjectType() == ObjectTypes.GASCLOUD || gameObject.getGameObjectType() == ObjectTypes.ASTEROIDFIELD) {
-                int distance = (int) getDistanceBetween(getBot(), gameObject);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                }
-            }
-        }
-        return minDistance;
-    }
-
-    // method computeDistanceToClosestEnemy
-    public int computeDistanceToClosestEnemy() {
-        int minDistance = Integer.MAX_VALUE;
-        for (GameObject gameObject : gameState.getGameObjects()) {
-            if (gameObject.getGameObjectType() == ObjectTypes.PLAYER && gameObject.getId() != getBot().getId()) {
-                int distance = (int) getDistanceBetween(getBot(), gameObject);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                }
-            }
-        }
-        return minDistance;
-    }
-
     public void computeNextPlayerAction(PlayerAction playerAction) {        
         if (!gameState.getGameObjects().isEmpty()) {    
             stayInsideTheRing();
         }     
         this.playerAction = playerAction; 
-    }
-    
-    // method getFoods
-    public List<GameObject> getFoods() {
-        return this.gameState.getGameObjects().stream()
-                .filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.FOOD
-                        || gameObject.getGameObjectType() == ObjectTypes.SUPERFOOD)
-                .collect(Collectors.toList());
-    }
-
-    // method getClosestFood
-    public GameObject getClosestFood() {
-        List<GameObject> foods = getFoods();
-        GameObject closestFood = null;
-        double closestFoodDistance = Double.MAX_VALUE;
-        for (GameObject food : foods) {
-            double distance = getDistanceBetween(getBot(), food);
-            if (distance < closestFoodDistance) {
-                closestFood = food;
-                closestFoodDistance = distance;
-            }
-        }
-        return closestFood;
-    }
-
-    // method eatStrategy and update position agar tidak keluar dari world
-    public void eatStrategy() {
-        GameObject closestFood = getClosestFood();
-        if (closestFood != null) {
-            // makan food yang terdekat pertama
-            playerAction.setAction(PlayerActions.FORWARD);
-            playerAction.setHeading(getHeadingBetween(closestFood));
-        }
     }
 
     public void stayInsideTheRing() {
@@ -149,7 +73,7 @@ public class BotService {
                             .comparing(item -> getDistanceBetween(bot, item)))
                     .collect(Collectors.toList());
         if (currentTick > 10 && (currentTick % 10 == 0) && bot.getSize() > 10) {
-            if (playerList.get(0).getSize() > bot.size) {
+            if (playerList.get(0).getSize() >= bot.size) {
                 playerAction.setAction(PlayerActions.FIRETORPEDOES);
                 playerAction.setHeading(getHeadingBetween(playerList.get(0)));
             }
@@ -207,45 +131,37 @@ public class BotService {
         return null;
     }
 
-    // method getDangerousObjects
-    public List<GameObject> getDangerousObjects() {
-        // GASCLOUD and ASTEROIDFIELD
+    // method eatStrategy and update position agar tidak keluar dari world
+    public void eatStrategy() {
+        GameObject closestFood = getClosestFood();
+        if (closestFood != null) {
+            // makan food yang terdekat pertama
+            playerAction.setAction(PlayerActions.FORWARD);
+            playerAction.setHeading(getHeadingBetween(closestFood));
+        }
+    }
+    
+    // method getFoods
+    public List<GameObject> getFoods() {
         return this.gameState.getGameObjects().stream()
-                .filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.GASCLOUD
-                        || gameObject.getGameObjectType() == ObjectTypes.ASTEROIDFIELD)
+                .filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.FOOD
+                        || gameObject.getGameObjectType() == ObjectTypes.SUPERFOOD)
                 .collect(Collectors.toList());
     }
 
-    // method geClosestDangerousObject
-    public GameObject getClosestDangerousObject() {
-        List<GameObject> dangerousObjects = getDangerousObjects();
-        GameObject closestDangerousObject = null;
-        double closestDangerousObjectDistance = Double.MAX_VALUE;
-        for (GameObject dangerousObject : dangerousObjects) {
-            double distance = getDistanceBetween(getBot(), dangerousObject);
-            if (distance < closestDangerousObjectDistance) {
-                closestDangerousObject = dangerousObject;
-                closestDangerousObjectDistance = distance;
+    // method getClosestFood
+    public GameObject getClosestFood() {
+        List<GameObject> foods = getFoods();
+        GameObject closestFood = null;
+        double closestFoodDistance = Double.MAX_VALUE;
+        for (GameObject food : foods) {
+            double distance = getDistanceBetween(getBot(), food);
+            if (distance < closestFoodDistance) {
+                closestFood = food;
+                closestFoodDistance = distance;
             }
         }
-        return closestDangerousObject;
-    }
-    
-    public void avoidDanger() {
-        // move away from danger
-        var gasClouds = gameState.getGameObjects().stream().filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.GASCLOUD).collect(Collectors.toList());
-        var asteroidField = gameState.getGameObjects().stream().filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.ASTEROIDFIELD).collect(Collectors.toList());
-        var danger = new ArrayList<GameObject>();
-        danger.addAll(gasClouds);
-        danger.addAll(asteroidField);
-        var closestDanger = danger.stream().min(Comparator.comparing(gameObject -> getDistanceBetween(bot, gameObject))).orElse(null);
-        if (closestDanger != null) {
-            var distance = getDistanceBetween(bot, closestDanger);
-            if (distance < 100) {
-                playerAction.setAction(PlayerActions.FORWARD);
-                playerAction.setHeading(getHeadingBetween(closestDanger) + 180);
-            } 
-        }
+        return closestFood;
     }
 
     public void protectBot() {
@@ -263,6 +179,13 @@ public class BotService {
         }
     }
 
+    // method getTorpedoSalvos return TORPEDOSALVO
+    public List<GameObject> getTorpedoSalvos() {
+        return this.gameState.getGameObjects().stream()
+                .filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.TORPEDOSALVO)
+                .collect(Collectors.toList());
+    }
+
     private GameObject getShield() {
         for (GameObject gameObject : gameState.getPlayerGameObjects()) {
             if (gameObject.getGameObjectType() == ObjectTypes.SHIELD) {
@@ -271,56 +194,22 @@ public class BotService {
         }
         return null;
     }
-
-    // method avoidDangerStrategy
-    public void avoidDangerStrategy() {
-        GameObject closestDangerousObject = getClosestDangerousObject();
-        if (closestDangerousObject != null) {
-            playerAction.setAction(PlayerActions.FORWARD);
-            playerAction.setHeading(getHeadingBetween(closestDangerousObject)+180);
-        }
-    }
-
-    // method getOtherPlayers
-    public List<GameObject> getOtherPlayers() {
-        return this.gameState.getGameObjects().stream()
-                .filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.PLAYER)
-                .filter(gameObject -> gameObject.getId() != getBot().getId())
-                .collect(Collectors.toList());
-    }
     
-    // method getClosestOtherPlayer
-    public GameObject getClosestOtherPlayer() {
-        List<GameObject> otherPlayers = getOtherPlayers();
-        GameObject closestOtherPlayer = null;
-        double closestOtherPlayerDistance = Double.MAX_VALUE;
-        for (GameObject otherPlayer : otherPlayers) {
-            double distance = getDistanceBetween(getBot(), otherPlayer);
-            if (distance < closestOtherPlayerDistance) {
-                closestOtherPlayer = otherPlayer;
-                closestOtherPlayerDistance = distance;
-            }
+    public void avoidDanger() {
+        // move away from danger
+        var gasClouds = gameState.getGameObjects().stream().filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.GASCLOUD).collect(Collectors.toList());
+        var asteroidField = gameState.getGameObjects().stream().filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.ASTEROIDFIELD).collect(Collectors.toList());
+        var danger = new ArrayList<GameObject>();
+        danger.addAll(gasClouds);
+        danger.addAll(asteroidField);
+        var closestDanger = danger.stream().min(Comparator.comparing(gameObject -> getDistanceBetween(bot, gameObject))).orElse(null);
+        if (closestDanger != null) {
+            var distance = getDistanceBetween(bot, closestDanger);
+            if (distance < 100) {
+                playerAction.setAction(PlayerActions.FORWARD);
+                playerAction.setHeading(getHeadingBetween(closestDanger) + 180);
+            } 
         }
-        return closestOtherPlayer;
-        }
-    
-    // method ACTIVATESHIELD IF THERE IS A TORPEDO SALVO COMING
-    public void activateShieldIfDangerous() {
-        List<GameObject> torpedoSalvos = getTorpedoSalvos();
-        for (GameObject torpedoSalvo : torpedoSalvos) {
-            double distance = getDistanceBetween(getBot(), torpedoSalvo);
-            if (distance < SHIELD_DISTANCE) {
-                playerAction.setAction(PlayerActions.ACTIVATESHIELD);
-                break;
-            }
-        }
-    }
-
-    // method getTorpedoSalvos return TORPEDOSALVO
-    public List<GameObject> getTorpedoSalvos() {
-        return this.gameState.getGameObjects().stream()
-                .filter(gameObject -> gameObject.getGameObjectType() == ObjectTypes.TORPEDOSALVO)
-                .collect(Collectors.toList());
     }
 
     public GameState getGameState() {
@@ -353,17 +242,4 @@ public class BotService {
         var triangleY = Math.abs(object1.getPosition().y - object2.getPosition().y);
         return Math.sqrt(triangleX * triangleX + triangleY * triangleY);
     }
-
-    // // resolve new action
-    // public PlayerAction resolveAction() {
-    //     // if dangerous object is near than food
-    //     if (getClosestDangerousObject() != null && getClosestDangerousObject().getDistance() < getClosestFood().getDistance()) {
-    //         // move away from dangerous object
-    //         playerAction.setAction(PlayerActions.FORWARD);
-    //         playerAction.setHeading(getHeadingBetween(getClosestDangerousObject()));
-        
-
-    //     return playerAction;
-    // }
-    // }
 }
