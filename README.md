@@ -2,22 +2,20 @@
 > Pemanfaatan Algoritma Greedy dalam Aplikasi Permainan “GALAXIO”
 
 ## KELOMPOK MUGGLE
-|13518134|Raihan Iqbal|
-|Varraz Hazandra Abrar|13521020|
-|Kartini Copa|13521026|
+13518134 Raihan Iqbal
+13521020 Varraz Hazandra Abrar
+13521026 Kartini Copa
 
 ## Table of Contents
 * [Deskripsi Umum](#deskripsi-umum)
 * [Requirement dan Instalasi](#trequirement-dan-instalasi)
-* [Fitur](#fitur)
-* [Tampilan](#tampilan)
-* [Struktur](#struktur)
+* [Build](#build)
+* [Cara Menjalankan Program](#cara-menjalankan-program)
 * [Cara menjalankan program](#cara-menjalankan-program)
 
 
 ## Deskripsi Umum
 Galaxio adalah sebuah game battle royale yang mempertandingkan bot kapal anda dengan beberapa bot kapal yang lain. Setiap pemain akan memiliki sebuah bot kapal dan tujuan dari permainan adalah agar bot kapal anda yang tetap hidup hingga akhir permainan. Penjelasan lebih lanjut mengenai aturan permainan akan dijelaskan di bawah. Agar dapat memenangkan pertandingan, setiap bot harus mengimplementasikan strategi tertentu untuk dapat memenangkan permainan
-
 
 <img width="523" alt="image" src="https://user-images.githubusercontent.com/102657926/219686670-7c182454-5465-4188-9eea-ee7135a57d4c.png">
 
