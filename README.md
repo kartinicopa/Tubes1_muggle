@@ -10,9 +10,7 @@
 * [Deskripsi Umum](#deskripsi-umum)
 * [Requirement dan Instalasi](#trequirement-dan-instalasi)
 * [Build](#build)
-* [Cara Menjalankan Program](#cara-menjalankan-program)
-* [Cara menjalankan program](#cara-menjalankan-program)
-
+* [Cara Menjalankan game](#cara-menjalankan-program)
 
 ## Deskripsi Umum
 Galaxio adalah sebuah game battle royale yang mempertandingkan bot kapal anda dengan beberapa bot kapal yang lain. Setiap pemain akan memiliki sebuah bot kapal dan tujuan dari permainan adalah agar bot kapal anda yang tetap hidup hingga akhir permainan. Penjelasan lebih lanjut mengenai aturan permainan akan dijelaskan di bawah. Agar dapat memenangkan pertandingan, setiap bot harus mengimplementasikan strategi tertentu untuk dapat memenangkan permainan
